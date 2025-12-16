@@ -1,38 +1,79 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { Helmet } from "react-helmet-async";
 import styles from "./PasswordGenerator.module.css";
 
 /* ===============================
    Utils
 =============================== */
-const generatePassword = ({ length, numbers, symbols, uppercase }) => {
-  let chars = "abcdefghijklmnopqrstuvwxyz";
 
-  if (uppercase) chars += "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-  if (numbers) chars += "0123456789";
-  if (symbols) chars += "!@#$%^&*()_+-=[]{}<>?";
-
-  return Array.from({ length }, () =>
-    chars[Math.floor(Math.random() * chars.length)]
-  ).join("");
+const CHARSETS = {
+  lowercase: "abcdefghijklmnopqrstuvwxyz",
+  uppercase: "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+  numbers: "0123456789",
+  symbols: "!@#$%^&*()_+-=[]{}<>?",
 };
 
+function getRandomChar(chars) {
+  const array = new Uint32Array(1);
+  window.crypto.getRandomValues(array);
+  return chars[array[0] % chars.length];
+}
+
+function generatePassword({ length, numbers, symbols, uppercase }) {
+  let chars = CHARSETS.lowercase;
+
+  if (uppercase) chars += CHARSETS.uppercase;
+  if (numbers) chars += CHARSETS.numbers;
+  if (symbols) chars += CHARSETS.symbols;
+
+  return Array.from({ length }, () => getRandomChar(chars)).join("");
+}
+
+/* ===============================
+   Component
+=============================== */
+
 export default function PasswordGenerator() {
+  /* ===============================
+     State
+  =============================== */
+
   const [length, setLength] = useState(16);
   const [numbers, setNumbers] = useState(true);
   const [symbols, setSymbols] = useState(false);
   const [uppercase, setUppercase] = useState(true);
 
-  const [password, setPassword] = useState("");
+  const [password, setPassword] = useState(() =>
+    generatePassword({
+      length: 16,
+      numbers: true,
+      symbols: false,
+      uppercase: true,
+    })
+  );
+
   const [copied, setCopied] = useState(false);
 
-  const handleGenerate = () => {
-    setPassword(
-      generatePassword({ length, numbers, symbols, uppercase })
-    );
-  };
+  /* ===============================
+     Handlers
+  =============================== */
 
-  const handleCopy = async () => {
+  const regenerate = useCallback(
+    (next = {}) => {
+      const options = {
+        length,
+        numbers,
+        symbols,
+        uppercase,
+        ...next,
+      };
+
+      setPassword(generatePassword(options));
+    },
+    [length, numbers, symbols, uppercase]
+  );
+
+  const copyToClipboard = async () => {
     if (!password) return;
 
     try {
@@ -44,41 +85,33 @@ export default function PasswordGenerator() {
     }
   };
 
+  /* ===============================
+     Render
+  =============================== */
+
   return (
     <>
       <Helmet>
         <title>Password Generator</title>
         <meta
           name="description"
-          content="Secure password generator."
+          content="Secure password generator with customizable options."
         />
       </Helmet>
 
       {copied && (
-        <div
-          className={styles.toast}
-          role="status"
-          aria-live="polite"
-        >
-          Скопійовано
+        <div className={styles.toast} role="alert">
+          Пароль скопирован
         </div>
       )}
 
-      <section
-        className={styles.cover}
-        aria-labelledby="password-generator-title"
-      >
+      <section className={styles.cover}>
         <article className={styles.card}>
           {/* Header */}
           <header>
-            <h1
-              id="password-generator-title"
-              className={styles.title}
-            >
-              Password Generator
-            </h1>
+            <h1 className={styles.title}>Password Generator</h1>
             <p className={styles.subtitle}>
-              Secure password generator
+              Генерато паролей
             </p>
           </header>
 
@@ -87,91 +120,90 @@ export default function PasswordGenerator() {
             className={styles.controls}
             onSubmit={(e) => {
               e.preventDefault();
-              handleGenerate();
+              regenerate();
             }}
           >
             {/* Length */}
-            <label
-              htmlFor="password-length"
-              className={styles.rangeLabel}
-            >
-              Довжина пароля: <strong>{length}</strong>
+            <label className={styles.rangeLabel}>
+              Длина пароля: <strong>{length}</strong>
             </label>
 
             <input
-              id="password-length"
               type="range"
               min="8"
               max="32"
               value={length}
-              onChange={(e) => setLength(Number(e.target.value))}
+              onChange={(e) => {
+                const value = Number(e.target.value);
+                setLength(value);
+                regenerate({ length: value });
+              }}
             />
 
             {/* Options */}
             <fieldset className={styles.toggles}>
               <legend className={styles.legend}>
-                Налаштування
+                Настройки
               </legend>
 
-              <label htmlFor="uppercase">
+              <label>
                 <input
-                  id="uppercase"
                   type="checkbox"
                   checked={uppercase}
-                  onChange={() => setUppercase((v) => !v)}
+                  onChange={() => {
+                    setUppercase((v) => !v);
+                    regenerate({ uppercase: !uppercase });
+                  }}
                 />
-                Великі літери
+                Заглавные буквы
               </label>
 
-              <label htmlFor="numbers">
+              <label>
                 <input
-                  id="numbers"
                   type="checkbox"
                   checked={numbers}
-                  onChange={() => setNumbers((v) => !v)}
+                  onChange={() => {
+                    setNumbers((v) => !v);
+                    regenerate({ numbers: !numbers });
+                  }}
                 />
-                Цифри
+                Цифры
               </label>
 
-              <label htmlFor="symbols">
+              <label>
                 <input
-                  id="symbols"
                   type="checkbox"
                   checked={symbols}
-                  onChange={() => setSymbols((v) => !v)}
+                  onChange={() => {
+                    setSymbols((v) => !v);
+                    regenerate({ symbols: !symbols });
+                  }}
                 />
-                Символи
+                Спецсимволы
               </label>
             </fieldset>
 
-            {/* Action */}
+            {/* Generate */}
             <button
               type="submit"
-              className={styles.generate}
+              className={`${styles.btn} ${styles.btnPrimary}`}
             >
-              Згенерувати пароль
+            Новый пароль
             </button>
           </form>
 
           {/* Result */}
-          {password && (
-            <output
-              className={styles.resultWrap}
-              role="button"
-              tabIndex={0}
-              aria-label="Натисніть, щоб скопіювати пароль"
-              aria-live="polite"
-              onClick={handleCopy}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  handleCopy();
-                }
-              }}
+          <div className={styles.result}>
+            <pre>{password}</pre>
+
+            <button
+              type="button"
+              className={`${styles.btn} ${styles.btnSecondary}`}
+              onClick={copyToClipboard}
             >
-              <pre>{password}</pre>
-            </output>
-          )}
+              Скопировать
+            </button>
+          </div>
         </article>
       </section>
     </>
