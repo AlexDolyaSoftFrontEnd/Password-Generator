@@ -101,7 +101,7 @@ export default function PasswordGenerator() {
 
       {copied && (
         <div className={styles.toast} role="alert">
-          Пароль скопирован
+          <span className={styles.toast__title}>Пароль скопирован</span>
         </div>
       )}
 
@@ -109,10 +109,7 @@ export default function PasswordGenerator() {
         <article className={styles.card}>
           {/* Header */}
           <header>
-            <h1 className={styles.title}>Password Generator</h1>
-            <p className={styles.subtitle}>
-              Генерато паролей
-            </p>
+            <h1 className={styles.cover__title}>Password Generator</h1>
           </header>
 
           {/* Controls */}
@@ -125,7 +122,7 @@ export default function PasswordGenerator() {
           >
             {/* Length */}
             <label className={styles.rangeLabel}>
-              Длина пароля: <strong>{length}</strong>
+              <span>Длина пароля: <strong>{length}</strong></span>
             </label>
 
             <input
@@ -143,7 +140,7 @@ export default function PasswordGenerator() {
             {/* Options */}
             <fieldset className={styles.toggles}>
               <legend className={styles.legend}>
-                Настройки
+                Настройки:
               </legend>
 
               <label>
