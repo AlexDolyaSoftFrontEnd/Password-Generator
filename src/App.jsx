@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Helmet } from "react-helmet-async";
 import styles from "./PasswordGenerator.module.css";
 
@@ -43,16 +43,32 @@ export default function PasswordGenerator() {
   const [symbols, setSymbols] = useState(false);
   const [uppercase, setUppercase] = useState(true);
 
-  const [password, setPassword] = useState(() =>
-    generatePassword({
-      length: 16,
-      numbers: true,
-      symbols: false,
-      uppercase: true,
-    })
-  );
-
+  const [password, setPassword] = useState("");
   const [copied, setCopied] = useState(false);
+
+  // loader states
+  const [loading, setLoading] = useState(false);       // генерация
+  const [pageLoading, setPageLoading] = useState(true); // initial load
+
+  /* ===============================
+     Initial Page Loader
+  =============================== */
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setPassword(
+        generatePassword({
+          length: 16,
+          numbers: true,
+          symbols: false,
+          uppercase: true,
+        })
+      );
+      setPageLoading(false);
+    }, 800); // задержка загрузки страницы
+
+    return () => clearTimeout(timer);
+  }, []);
 
   /* ===============================
      Handlers
@@ -68,13 +84,18 @@ export default function PasswordGenerator() {
         ...next,
       };
 
-      setPassword(generatePassword(options));
+      setLoading(true);
+
+      setTimeout(() => {
+        setPassword(generatePassword(options));
+        setLoading(false);
+      }, 300);
     },
     [length, numbers, symbols, uppercase]
   );
 
   const copyToClipboard = async () => {
-    if (!password) return;
+    if (!password || loading || pageLoading) return;
 
     try {
       await navigator.clipboard.writeText(password);
@@ -86,13 +107,28 @@ export default function PasswordGenerator() {
   };
 
   /* ===============================
+     Page Loader Render
+  =============================== */
+
+  if (pageLoading) {
+    return (
+      <div className={styles.pageLoader} aria-busy="true">
+        <div className={styles.loader} />
+        <span className={styles.pageLoaderText}>
+          Загрузка генератора…
+        </span>
+      </div>
+    );
+  }
+
+  /* ===============================
      Render
   =============================== */
 
   return (
     <>
       <Helmet>
-        <title>Password Generator</title>
+        <title>Генератор пароля</title>
         <meta
           name="description"
           content="Secure password generator with customizable options."
@@ -107,12 +143,10 @@ export default function PasswordGenerator() {
 
       <section className={styles.cover}>
         <article className={styles.card}>
-          {/* Header */}
           <header>
-            <h1 className={styles.cover__title}>Password Generator</h1>
+            <h1 className={styles.cover__title}>Генератор пароля</h1>
           </header>
 
-          {/* Controls */}
           <form
             className={styles.controls}
             onSubmit={(e) => {
@@ -120,9 +154,10 @@ export default function PasswordGenerator() {
               regenerate();
             }}
           >
-            {/* Length */}
             <label className={styles.rangeLabel}>
-              <span>Длина пароля: <strong>{length}</strong></span>
+              <span>
+                Длина пароля: <strong>{length}</strong>
+              </span>
             </label>
 
             <input
@@ -137,11 +172,8 @@ export default function PasswordGenerator() {
               }}
             />
 
-            {/* Options */}
             <fieldset className={styles.toggles}>
-              <legend className={styles.legend}>
-                Настройки:
-              </legend>
+              <legend className={styles.legend}>Настройки:</legend>
 
               <label>
                 <input
@@ -180,23 +212,27 @@ export default function PasswordGenerator() {
               </label>
             </fieldset>
 
-            {/* Generate */}
             <button
               type="submit"
               className={`${styles.btn} ${styles.btnPrimary}`}
+              disabled={loading}
             >
-            Новый пароль
+              {loading ? "Генерация..." : "Новый пароль"}
             </button>
           </form>
 
-          {/* Result */}
           <div className={styles.result}>
-            <pre>{password}</pre>
+            {loading ? (
+              <div className={styles.loader} />
+            ) : (
+              <pre>{password}</pre>
+            )}
 
             <button
               type="button"
               className={`${styles.btn} ${styles.btnSecondary}`}
               onClick={copyToClipboard}
+              disabled={loading}
             >
               Скопировать
             </button>
@@ -206,4 +242,3 @@ export default function PasswordGenerator() {
     </>
   );
 }
-
